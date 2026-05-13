@@ -1,0 +1,25 @@
+# Bağımlılıklar
+node_modules/
+
+# Derlenmiş Çıktılar (tsup buraya build alacak)
+dist/
+
+# Test Kapsam Raporları (vitest coverage çalıştırırsan oluşur)
+coverage/
+
+# Çevresel Değişkenler (İleride API key vs. eklersen GitHub'a sızmasın)
+.env
+.env.local
+.env.*.local
+
+# Log Dosyaları (Hata alındığında oluşan geçici dosyalar)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# İşletim Sistemi ve Editör Dosyaları
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

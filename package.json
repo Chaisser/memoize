@@ -1,6 +1,6 @@
 {
   "name": "@chaisser/memoize",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Function memoization with TTL and cache size limit",
   "type": "module",
   "main": "./dist/index.js",

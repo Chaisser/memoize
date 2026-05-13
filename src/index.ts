@@ -6,9 +6,35 @@ export interface MemoOptions {
   resolver?: (...args: unknown[]) => string;
 }
 
-interface CacheEntry<T> {
+export interface CacheEntry<T> {
   value: T;
   expiresAt: number;
+}
+
+export interface MemoizedCache<T> {
+  cache: Map<string, CacheEntry<T>>;
+}
+
+export interface MemoizedAsyncCache<T> {
+  cache: Map<string, CacheEntry<T>>;
+  pending: Map<string, Promise<T>>;
+}
+
+export interface MemoizedWithStats<T> {
+  cache: Map<string, CacheEntry<T>>;
+  stats(): MemoStats;
+}
+
+export interface MemoizedDebounce<T> {
+  cache: Map<string, CacheEntry<T>>;
+  cancel(): void;
+}
+
+export interface MemoStats {
+  hits: number;
+  misses: number;
+  hitRate: number;
+  size: number;
 }
 
 // ===== KEY SERIALIZATION =====
@@ -30,7 +56,7 @@ export function defaultResolver(...args: unknown[]): string {
 export function memoize<T extends (...args: unknown[]) => unknown>(
   fn: T,
   options: MemoOptions = {}
-): T & { cache: Map<string, CacheEntry<ReturnType<T>>> } {
+): T & MemoizedCache<ReturnType<T>> {
   const {
     ttl = Infinity,
     maxSize = Infinity,
@@ -61,7 +87,7 @@ export function memoize<T extends (...args: unknown[]) => unknown>(
     });
 
     return result;
-  } as T & { cache: Map<string, CacheEntry<ReturnType<T>>> };
+  } as T & MemoizedCache<ReturnType<T>>;
 
   memoized.cache = cache;
   return memoized;
@@ -73,7 +99,7 @@ export function memoizeWithTTL<T extends (...args: unknown[]) => unknown>(
   fn: T,
   ttl: number,
   resolver?: (...args: unknown[]) => string
-): T & { cache: Map<string, CacheEntry<ReturnType<T>>> } {
+): T & MemoizedCache<ReturnType<T>> {
   return memoize(fn, { ttl, resolver });
 }
 
@@ -83,7 +109,7 @@ export function memoizeWithLimit<T extends (...args: unknown[]) => unknown>(
   fn: T,
   maxSize: number,
   resolver?: (...args: unknown[]) => string
-): T & { cache: Map<string, CacheEntry<ReturnType<T>>> } {
+): T & MemoizedCache<ReturnType<T>> {
   return memoize(fn, { maxSize, resolver });
 }
 
@@ -171,7 +197,7 @@ export class MemoMap<T = unknown> {
 export function memoizeAsync<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   options: MemoOptions = {}
-): T & { cache: Map<string, CacheEntry<Awaited<ReturnType<T>>>>; pending: Map<string, Promise<Awaited<ReturnType<T>>>> } {
+): T & MemoizedAsyncCache<Awaited<ReturnType<T>>> {
   const {
     ttl = Infinity,
     maxSize = Infinity,
@@ -211,7 +237,7 @@ export function memoizeAsync<T extends (...args: unknown[]) => Promise<unknown>>
 
     pending.set(key, promise);
     return promise;
-  } as T & { cache: Map<string, CacheEntry<Awaited<ReturnType<T>>>>; pending: Map<string, Promise<Awaited<ReturnType<T>>>> };
+  } as T & MemoizedAsyncCache<Awaited<ReturnType<T>>>;
 
   memoized.cache = cache;
   memoized.pending = pending;
@@ -220,17 +246,10 @@ export function memoizeAsync<T extends (...args: unknown[]) => Promise<unknown>>
 
 // ===== MEMOIZE WITH STATS =====
 
-export interface MemoStats {
-  hits: number;
-  misses: number;
-  hitRate: number;
-  size: number;
-}
-
 export function memoizeWithStats<T extends (...args: unknown[]) => unknown>(
   fn: T,
   options: MemoOptions = {}
-): T & { cache: Map<string, CacheEntry<ReturnType<T>>>; stats(): MemoStats } {
+): T & MemoizedWithStats<ReturnType<T>> {
   const {
     ttl = Infinity,
     maxSize = Infinity,
@@ -265,7 +284,7 @@ export function memoizeWithStats<T extends (...args: unknown[]) => unknown>(
     });
 
     return result;
-  } as T & { cache: Map<string, CacheEntry<ReturnType<T>>>; stats(): MemoStats };
+  } as T & MemoizedWithStats<ReturnType<T>>;
 
   memoized.cache = cache;
   memoized.stats = () => {
@@ -308,7 +327,7 @@ export function memoizeDebounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number,
   resolver?: (...args: unknown[]) => string
-): T & { cache: Map<string, CacheEntry<ReturnType<T>>>; cancel(): void } {
+): T & MemoizedDebounce<ReturnType<T>> {
   const keyResolver = resolver ?? defaultResolver;
   const cache = new Map<string, CacheEntry<ReturnType<T>>>();
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -333,7 +352,7 @@ export function memoizeDebounce<T extends (...args: unknown[]) => unknown>(
     }, delay));
 
     return result;
-  } as T & { cache: Map<string, CacheEntry<ReturnType<T>>>; cancel(): void };
+  } as T & MemoizedDebounce<ReturnType<T>>;
 
   memoized.cache = cache;
   memoized.cancel = () => {
@@ -345,14 +364,14 @@ export function memoizeDebounce<T extends (...args: unknown[]) => unknown>(
   return memoized;
 }
 
-// ===== UTILITY: CLEAR ALL =====
+// ===== UTILITY: CLEAR CACHE =====
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function clearCache(fn: any): void {
-  fn.cache?.clear();
+export function clearCache<T>(fn: T & MemoizedCache<unknown>): void {
+  fn.cache.clear();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function cacheSize(fn: any): number {
-  return fn.cache?.size ?? 0;
+// ===== UTILITY: CACHE SIZE =====
+
+export function cacheSize<T>(fn: T & MemoizedCache<unknown>): number {
+  return fn.cache.size;
 }

@@ -410,8 +410,9 @@ describe('@chaisser/memoize', () => {
       expect(cacheSize(fn)).toBe(2);
     });
 
-    it('returns 0 for non-memoized functions', () => {
-      expect(cacheSize(() => {})).toBe(0);
+    it('returns 0 for empty cache', () => {
+      const fn = memoize((x: unknown) => x);
+      expect(cacheSize(fn)).toBe(0);
     });
   });
 
